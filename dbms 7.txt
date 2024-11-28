@@ -1,0 +1,112 @@
+mysql> create database project;
+Query OK, 1 row affected (0.02 sec)
+
+mysql> use project;
+Database changed
+mysql> CREATE TABLE Library (
+    ->     B_id INT PRIMARY KEY,
+    ->     Title VARCHAR(255),
+    ->     Edition INT,
+    ->     no_of_copies INT
+    -> );
+Query OK, 0 rows affected (0.04 sec)
+
+mysql> CREATE TABLE Library_Audit (
+    ->     B_id INT,
+    ->     Title VARCHAR(255),
+    ->     Edition INT,
+    ->     no_of_copies INT,
+    ->     date_of_mod TIMESTAMP,
+    ->     type_of_operation VARCHAR(50),
+    ->     user_who_performed VARCHAR(100)
+    -> );
+Query OK, 0 rows affected (0.10 sec)
+
+mysql> CREATE TABLE Transaction (
+    ->     Transaction_id INT PRIMARY KEY,
+    ->     Book_id INT,
+    ->     Sid INT,
+    ->     Issue_or_return ENUM('issue', 'return'),
+    ->     no_of_copies_issued_or_return INT,
+    ->     issue_date_or_return_date DATE
+    -> );
+Query OK, 0 rows affected (0.04 sec)
+
+mysql> DELIMITER //
+mysql>
+mysql> CREATE TRIGGER trg_library_update_audit
+     AFTER UPDATE ON Library
+     FOR EACH ROW
+     BEGIN
+         INSERT INTO Library_Audit (
+             B_id, Title, Edition, no_of_copies, date_of_mod, type_of_operation, user_who_performed
+         )
+         VALUES (
+             OLD.B_id, OLD.Title, OLD.Edition, OLD.no_of_copies, NOW(), 'UPDATE', CURRENT_USER()
+         );
+     END //
+Query OK, 0 rows affected (0.03 sec)
+
+mysql>
+mysql> DELIMITER //
+mysql>
+mysql> CREATE TRIGGER trg_library_delete_audit
+    -> AFTER DELETE ON Library
+    -> FOR EACH ROW
+    -> BEGIN
+    ->     INSERT INTO Library_Audit (
+    ->         B_id, Title, Edition, no_of_copies, date_of_mod, type_of_operation, user_who_performed
+    ->     )
+    ->     VALUES (
+    ->         OLD.B_id, OLD.Title, OLD.Edition, OLD.no_of_copies, NOW(), 'DELETE', CURRENT_USER()
+    ->     );
+    -> END //
+Query OK, 0 rows affected (0.01 sec)
+
+mysql>
+mysql> DELIMITER ;
+mysql> DELIMITER //
+mysql>
+mysql> CREATE TRIGGER trg_check_available_copies
+     BEFORE INSERT ON Transaction
+     FOR EACH ROW
+     BEGIN
+         DECLARE available_copies INT;
+    
+         
+         SELECT no_of_copies INTO available_copies
+         FROM Library
+         WHERE B_id = NEW.Book_id;
+    
+         
+         IF NEW.no_of_copies_issued_or_return > available_copies THEN
+             SET NEW.no_of_copies_issued_or_return = available_copies;
+         END IF;
+     END //
+Query OK, 0 rows affected (0.02 sec)
+
+mysql>
+mysql> DELIMITER ;
+mysql> DELIMITER //
+mysql>
+mysql> CREATE TRIGGER trg_update_copies
+     AFTER INSERT ON Transaction
+     FOR EACH ROW
+     BEGIN
+         IF NEW.Issue_or_return = 'issue' THEN
+    
+             UPDATE Library
+             SET no_of_copies = no_of_copies - NEW.no_of_copies_issued_or_return
+             WHERE B_id = NEW.Book_id;
+        ELSEIF NEW.Issue_or_return = 'return' THEN
+    
+             UPDATE Library
+             SET no_of_copies = no_of_copies + NEW.no_of_copies_issued_or_return
+             WHERE B_id = NEW.Book_id;
+         END IF;
+     END //
+Query OK, 0 rows affected (0.02 sec)
+
+mysql>
+mysql> DELIMITER ;
+mysql>

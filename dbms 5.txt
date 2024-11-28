@@ -1,0 +1,94 @@
+C35519
+SARAH KHAMBATTA
+TE DIV 5
+ASSIGN 5
+
+ desc student_marks;
++-------------+-------------+------+-----+---------+-------+
+| Field       | Type        | Null | Key | Default | Extra |
++-------------+-------------+------+-----+---------+-------+
+| name        | varchar(20) | YES  |     | NULL    |       |
+| total_marks | int(4)      | YES  |     | NULL    |       |
++-------------+-------------+------+-----+---------+-------+
+2 rows in set (0.00 sec)
+
+mysql> desc result;
++-------+-------------+------+-----+---------+-------+
+| Field | Type        | Null | Key | Default | Extra |
++-------+-------------+------+-----+---------+-------+
+| roll  | int(2)      | YES  |     | NULL    |       |
+| name  | varchar(20) | YES  |     | NULL    |       |
+| class | varchar(30) | YES  |     | NULL    |       |
++-------+-------------+------+-----+---------+-------+
+3 rows in set (0.00 sec)
+
+create procedure proc_Grade(in rn int(2),n varchar(20),m int(4))
+begin 
+declare class varchar(15);
+if m>=990 and m<=1500 then set class="Distinction";
+elseif m>=900 and m<=989 then set class="First Class";
+elseif m>=825 and m<=899 then set class="Higher Second Class";
+else set class="fail";
+end if;
+insert into student_marks values(n,m);
+insert into result values(rn,n,class);
+end//
+
+
+delimiter ;
+mysql> call proc_Grade(5,"sarah",1205);
+Query OK, 1 row affected (0.10 sec)
+
+mysql> select*from result;
++------+-----------+-------------+
+| roll | name      | class       |
++------+-----------+-------------+
+|    5 | sarah | Distinction |
++------+-----------+-------------+
+1 row in set (0.00 sec)
+
+
+call proc_Grade(3,"shreya",1400);
+Query OK, 1 row affected (0.12 sec)
+
+mysql> select*from student_marks;
++-----------+-------------+
+| name      | total_marks |
++-----------+-------------+
+| sarah    |        1205 |
+| shreya    |        1400 |
++-----------+-------------+
+2 rows in set (0.00 sec)
+
+
+
+
+
+create function fn(class1 varchar(15))
+returns int
+begin
+declare total int(6);
+select count(*) into total from result where class=class1;
+return total;
+end//
+
+ delimiter //
+ create function fn(class1 varchar(15))
+    -> returns int
+    -> begin
+    -> declare total int(6);
+    -> select count(*) into total from result where class=class1;
+    -> return total;
+    -> end//
+Query OK, 0 rows affected (0.02 sec)
+
+mysql> delimiter ;
+mysql> select fn("Distinction");
++-------------------+
+| fn("Distinction") |
++-------------------+
+|                 2 |
++-------------------+
+1 row in set (0.03 sec)
+
+
